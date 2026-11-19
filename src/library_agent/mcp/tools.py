@@ -3,6 +3,8 @@
 from mcp.server.mcpserver import MCPServer
 
 from library_agent.mcp.schemas import Book
+from library_agent.rag.store import retrieve
+from library_agent.schemas.rag import RetrievedPassage
 
 # Temporary catalog for testing MCP integration.
 # Later, these operations will call our catalog service.
@@ -72,3 +74,11 @@ def register_tools(mcp: MCPServer) -> None:
         """Check whether a book currently has an available copy."""
         book = find_book_by_id(book_id)
         return book.available_copies > 0
+
+    @mcp.tool()
+    def search_knowledge(
+        query: str,
+        limit: int = 4,
+    ) -> list[RetrievedPassage]:
+        """Search indexed library documents for relevant passages."""
+        return retrieve(query, k=limit)
