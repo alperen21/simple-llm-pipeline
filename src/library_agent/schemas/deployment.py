@@ -19,6 +19,7 @@ class DeploymentConfig(BaseModel):
     merged_dir: Path
     gguf_dir: Path
     llama_cpp_dir: Path
+    conversion_python: Path = Path("external/llama.cpp/.venv/bin/python")
 
     quantization: QuantizationType = "Q4_K_M"
 

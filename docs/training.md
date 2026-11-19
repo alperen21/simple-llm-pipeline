@@ -1,16 +1,17 @@
 # Training
 
-## Install dependencies
+Fine-tuning is the `library-train` CLI. Heavy dependencies live in the
+`training` extra (`torch`, `transformers`, `trl`, `peft`, `datasets`, `wandb`).
 
-```bash 
+## Install and verify
+
+```bash
 uv sync --group training
-```
-
-verify the cli is registered
-
-```bash 
 uv run --group training library-train --help
 ```
+
+On macOS x86_64, recent `torch` wheels may not resolve. Use a platform that
+publishes a matching wheel, or pin a compatible torch build, before running SFT.
 
 ## Prepare the dataset
 
@@ -18,75 +19,81 @@ uv run --group training library-train --help
 uv run --group training library-train prepare run
 ```
 
-This downsloads the dataset from huggingface using HfApi. 
-Then reads the conversations 
-Then Create train/validation/test splits
-Each of the data examples are validated using PyDantic
-Save reproducibility metadata
+This command:
 
-## Hyperparameter Tuning with Small LLaMa
+1. Downloads `Archangel-system/glaive-function-calling-v2-openai-native` via
+   `huggingface_hub`.
+2. Parses conversations and validates each example with
+   `library_agent.schemas.dataset.Conversation`.
+3. Rejects tool calls to undeclared functions and orphan tool responses.
+4. Splits train / validation / test (10% of original train held out for
+   validation) with a fixed seed.
+5. Writes JSONL under `data/processed/` and a SHA-256 manifest under
+   `data/manifests/` for reproducibility.
 
-Register a LoRA hyperparameter search with Weights & Biases
+SFT rows use columns `prompt`, `completion`, and `tools`. Empty datasets and
+missing columns fail in `train.load_training_dataset`.
+
+## Hyperparameter sweep
+
+`configs/sweep.yaml` searches discrete LoRA and learning-rate values. The
+objective is `selection/eval_loss` (minimize). Allowed parameter names are
+`lora_r`, `lora_alpha`, `lora_dropout`, and `learning_rate`.
+
 ```bash
 uv run --group training library-train sweep create \
-  --config configs/sweep.yaml
+  --config configs/sweep.yaml \
+  --project library-agent
 ```
 
-Execute the sweep
+The command prints a W&B sweep ID. Run a bounded number of trials:
+
 ```bash
 uv run --group training library-train sweep agent \
   --sweep-id YOUR_SWEEP_ID \
+  --base-config configs/training/pilot.yaml \
   --count 10
 ```
-This basically tries different LoRA configurations and selects the best
 
+Each trial copies the base `TrainingConfig`, overrides the sampled
+hyperparameters, writes checkpoints under `output_dir / run_id`, trains through
+the same `SFTTrainer` path, reads `metrics.json`, and logs
+`selection/eval_loss`.
 
-Finally, select the best model:
+## Select a candidate
+
+```bash
 uv run --group training library-train select run \
   --config configs/selection.yaml
+```
 
-Based on the findings update: configs/training/final.yaml
+Selection loads measured `CandidateBenchmark` records from JSON, drops
+candidates that miss quality, latency, or memory gates, then chooses the lowest
+projected lifecycle cost for `expected_requests`. The report is written to
+`artifacts/selection.json`.
 
-## Train the model
+Copy the chosen LoRA settings into `configs/training/final.yaml` before the
+full train.
+
+## Train
 
 ```bash
 uv run --group training library-train run \
-  --config configs/training/final.yaml
+  --config configs/training/pilot.yaml
 ```
 
-This saves the LoRA adapter
+`TrainingConfig` fields include model id, dataset paths, LoRA rank/alpha/dropout,
+optimizer settings, `max_length`, seed, and optional W&B. Training uses
+completion-only loss, gradient checkpointing, and epoch-level eval. The adapter
+and tokenizer are saved to `{output_dir}/adapter`.
 
+Pilot config (`configs/training/pilot.yaml`) targets
+`meta-llama/Llama-3.2-1B-Instruct` with r=16, α=32, two epochs, batch size 2.
 
-## Serve
+## Related code
 
-Deployment is a separate CLI from training. Merge the LoRA adapter with the base model:
-
-```bash
-uv run --group training library-deploy merge
-```
-
-Convert to GGUF, then quantize:
-
-```bash
-uv run --group training library-deploy convert
-uv run --group training library-deploy quantize
-```
-
-Register with Ollama:
-
-```bash
-uv run --group training library-deploy ollama
-```
-
-Publish to Hugging Face:
-
-```bash
-uv run --group training library-deploy publish-adapter --model-card PATH
-uv run --group training library-deploy publish-gguf --model-card PATH --license PATH --notice PATH
-```
-
-Or run merge through Ollama registration in one step:
-
-```bash
-uv run --group training library-deploy run
-```
+- [`library_agent.training.prepare`](reference.md#library_agent.training.prepare)
+- [`library_agent.training.sweep`](reference.md#library_agent.training.sweep)
+- [`library_agent.training.select`](reference.md#library_agent.training.select)
+- [`library_agent.training.train`](reference.md#library_agent.training.train)
+- [`library_agent.schemas.training.TrainingConfig`](reference.md#library_agent.schemas.training.TrainingConfig)

@@ -1,0 +1,45 @@
+site_name: Library Agent
+site_description: Fine-tuning, deployment, RAG, and MCP-backed library assistant
+repo_name: simple-llm-pipeline
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.expand
+    - content.code.copy
+    - search.highlight
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            show_source: true
+            merge_init_into_class: true
+            members_order: source
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - Training: training.md
+  - Deployment: deployment.md
+  - Agent and RAG: agent.md
+  - Evaluation: evaluation.md
+  - Development: development.md
+  - Testing: testing.md
+  - API reference: reference.md
+  - ADRs:
+      - Index: adr/README.md
+      - 0001 Package boundaries: adr/0001-architecture.md
+      - 0002 Model selection: adr/0002-model-selection.md

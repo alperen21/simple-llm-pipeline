@@ -4,12 +4,20 @@ from pathlib import Path
 
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
-
-from library_agent.schemas.rag import RetrievedPassage
+from pydantic import BaseModel, Field
 
 INDEX_DIR = Path("data/chroma")
 COLLECTION_NAME = "library_knowledge"
 EMBEDDING_MODEL = "text-embedding-3-small"
+
+
+class RetrievedPassage(BaseModel):
+    """A retrieved passage with its source and vector distance."""
+
+    source: str
+    start_index: int = Field(ge=0)
+    content: str
+    distance: float
 
 
 def get_store() -> Chroma:
@@ -37,6 +45,7 @@ def retrieve(query: str, k: int = 4) -> list[RetrievedPassage]:
         )
 
     store = get_store()
+
     matches = store.similarity_search_with_score(
         query=query,
         k=k,
@@ -51,3 +60,24 @@ def retrieve(query: str, k: int = 4) -> list[RetrievedPassage]:
         )
         for document, distance in matches
     ]
+
+
+def retrieve_context(
+    query: str,
+    k: int = 4,
+) -> tuple[str, list[str]]:
+    """Retrieve passages and format them as LLM context."""
+    passages = retrieve(query=query, k=k)
+
+    context = "\n\n".join(
+        (
+            f"[{index}] Source: {passage.source}\n"
+            f"Start index: {passage.start_index}\n"
+            f"{passage.content}"
+        )
+        for index, passage in enumerate(passages, start=1)
+    )
+
+    sources = list(dict.fromkeys(passage.source for passage in passages))
+
+    return context, sources

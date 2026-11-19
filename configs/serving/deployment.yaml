@@ -6,6 +6,7 @@ gguf_dir: artifacts/gguf
 
 # Local clone of llama.cpp
 llama_cpp_dir: external/llama.cpp
+conversion_python: external/llama.cpp/.venv/bin/python
 
 quantization: Q4_K_M
 ollama_model: library-agent:q4
