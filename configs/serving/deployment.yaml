@@ -1,0 +1,19 @@
+base_model: meta-llama/Llama-3.2-1B-Instruct
+
+adapter_dir: artifacts/pilot/adapter
+merged_dir: artifacts/merged
+gguf_dir: artifacts/gguf
+
+# Local clone of llama.cpp
+llama_cpp_dir: external/llama.cpp
+
+quantization: Q4_K_M
+ollama_model: library-agent:q4
+context_length: 4096
+
+# Replace YOUR_USERNAME before publishing
+hf_adapter_repo: YOUR_USERNAME/Llama-3.2-1B-LibraryAgent-LoRA
+hf_gguf_repo: YOUR_USERNAME/Llama-3.2-1B-LibraryAgent-GGUF
+
+# Private until evaluation and release checks pass
+hf_public: false

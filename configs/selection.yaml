@@ -1,0 +1,19 @@
+
+# Input and output
+benchmark_path: data/manifests/candidate_benchmarks.json
+output_path: artifacts/selection.json
+
+# All benchmarks must share this evaluation setup
+evaluation_suite: library-tool-calling-v1
+hardware_profile: ollama-target-hardware-v1
+
+# Expected workload over the chosen deployment horizon
+expected_requests: 100000
+
+# Quality thresholds (initial, illustrative values)
+min_task_success_rate: 0.85
+min_tool_call_accuracy: 0.90
+
+# Operational constraints
+max_p95_latency_ms: 5000
+max_peak_memory_gb: 16

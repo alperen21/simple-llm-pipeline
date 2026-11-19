@@ -1,0 +1,146 @@
+
+[project]
+name = "simple-llm-pipeline"
+version = "0.1.0"
+description = "Production-style LLM fine-tuning, deployment, and agent pipeline"
+readme = "README.md"
+authors = [
+    { name = "Alperen21", email = "alperen.yildiz@u.nus.edu" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "langchain-ollama>=1.1.0",
+    "langchain[mcp]>=1.5.2",
+    "langgraph>=1.2.23",
+    "langsmith>=0.15.0",
+    "mcp>=2.3.0",
+    "pydantic>=2.14.3",
+    "pydantic-settings>=2.16.3",
+    "rich>=15.0.0",
+    "typer>=0.29.2",
+]
+
+
+# --------------------------------------------------
+# CLI entry points
+# --------------------------------------------------
+
+[project.scripts]
+library-agent = "library_agent.cli.main:app"
+library-train = "library_agent.training.cli:app"
+library-deploy = "library_agent.serving.cli:app"
+
+
+# --------------------------------------------------
+# Build system
+# --------------------------------------------------
+
+[build-system]
+requires = ["uv_build>=0.10.12,<0.11.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "library_agent"
+
+
+# --------------------------------------------------
+# Dependency groups
+# --------------------------------------------------
+
+[dependency-groups]
+
+training = [
+    "torch",
+    "transformers",
+    "datasets>=4.7.0",
+    "trl",
+    "peft",
+    "accelerate",
+    "huggingface-hub",
+    "safetensors",
+    "wandb",
+    "pyyaml",
+]
+
+dev = [
+    "hypothesis>=6.170.15",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.8.1",
+    "mkdocstrings[python]>=1.0.8",
+    "mypy>=2.4.1",
+    "pre-commit>=4.7.0",
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.5.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.5",
+]
+
+
+# --------------------------------------------------
+# Ruff: linting and formatting
+# --------------------------------------------------
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle
+    "F",    # Pyflakes
+    "I",    # import sorting
+    "B",    # bugbear
+    "UP",   # Python syntax modernization
+    "ANN",  # type annotations
+    "D",    # docstrings
+    "SIM",  # simplification
+]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["typer.Option", "typer.Argument"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+docstring-code-format = true
+
+
+# --------------------------------------------------
+# Mypy: static type checking
+# --------------------------------------------------
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_configs = true
+plugins = ["pydantic.mypy"]
+
+
+# --------------------------------------------------
+# Pytest: testing
+# --------------------------------------------------
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-ra"
+
+markers = [
+    "integration: integration tests",
+    "e2e: end-to-end tests",
+    "gpu: tests requiring GPU hardware",
+]
+
+
+# --------------------------------------------------
+# Coverage
+# --------------------------------------------------
+
+[tool.coverage.run]
+source = ["library_agent"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 90
